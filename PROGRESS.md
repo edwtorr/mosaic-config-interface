@@ -323,6 +323,10 @@ _Ninguno todavía_
 - ✅ Scripts de automatización:
   - setup-dev.bat (instalación y configuración)
   - start-dev.bat (iniciar desarrollo)
+- ✅ Repositorio Git inicializado:
+  - git init completado
+  - Commit inicial creado (d0e291d)
+  - 9 archivos, 1488 líneas de código
 - 🎯 **FASE 0 COMPLETADA - Lista para comenzar FASE 1**
 
 ---
