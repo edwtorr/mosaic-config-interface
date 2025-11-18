@@ -79,6 +79,228 @@ Crear una herramienta visual e intuitiva que permita a técnicos sin conocimient
 └─────────────────────┘
 ```
 
+## Compatibilidad y Detección de Proyectos UR
+
+### Alcance de Compatibilidad
+
+Este sistema está diseñado para trabajar con **proyectos de Universal Robots** que utilicen archivos `.script` y estructuras similares al proyecto L16. El sistema puede adaptarse automáticamente a diferentes proyectos UR.
+
+### Robots Universal Robots Compatibles
+
+El sistema soporta todos los modelos de la familia Universal Robots:
+
+**Modelos Estándar:**
+- UR3 / UR3e
+- UR5 / UR5e
+- UR10 / UR10e
+- UR16e
+- UR20
+- UR30
+
+**Variantes:**
+- Generación estándar (CB3)
+- Generación e-Series (Gen 5)
+- Variantes DC (Direct Current)
+
+### Detección Automática de Proyectos
+
+El sistema incluirá capacidad de **detección automática** para identificar y adaptarse a diferentes estructuras de proyectos UR:
+
+#### 1. Detección de Estructura del Proyecto
+
+```
+Análisis automático:
+├── Identificar archivos .urp (programa principal)
+├── Detectar archivos .script (scripts modulares)
+├── Localizar archivos .installation (configuración)
+├── Identificar archivos .variables (estado de variables)
+└── Reconocer convenciones de nombres
+```
+
+#### 2. Identificación de Patrones
+
+El sistema buscará automáticamente:
+
+**Patrones de Mosaico:**
+- Archivos con nombres como: `mosaico*.script`, `pattern*.script`, `layer*.script`
+- Variables de puntos: `p[...]`, `pose_*`, `waypoint_*`
+- Estructuras de movimiento: `movel()`, `movej()`, `movep()`
+
+**Puntos de Operación:**
+- Puntos de cogida: `pick_point`, `pickup_pos`, variables con "cog"
+- Puntos de dejada: `place_point`, `drop_pos`, variables con "dej"
+- Offsets y ajustes: variables con "offset", "adjust", "delta"
+
+**Variables de Configuración:**
+- Contadores de pallet: `pallet_count`, `layer_count`
+- Estados de sistema: `step_code`, `state_machine`
+- Configuraciones: variables numéricas y booleanas
+
+#### 3. Detección de Modelo de Robot
+
+El sistema extraerá automáticamente:
+
+```python
+# Desde archivos .installation o .urp
+- Modelo de robot (UR3, UR5, UR10, UR16, UR20, UR30)
+- Generación (CB3, e-Series)
+- Límites de workspace específicos del modelo
+- Configuración de payload máximo
+- Versión de PolyScope
+```
+
+#### 4. Adaptación de Validaciones
+
+Según el modelo detectado, el sistema ajustará:
+
+| Modelo | Alcance | Payload | TCP Speed | Validaciones |
+|--------|---------|---------|-----------|--------------|
+| UR3/UR3e | 500mm | 3kg | 1 m/s | Workspace pequeño |
+| UR5/UR5e | 850mm | 5kg | 1 m/s | Workspace medio |
+| UR10/UR10e | 1300mm | 12.5kg | 1 m/s | Workspace grande |
+| UR16e | 900mm | 16kg | 1 m/s | Payload alto |
+| UR20 | 1750mm | 20kg | 1.5 m/s | Alcance extendido |
+| UR30 | 1300mm | 30kg | 1.5 m/s | Payload muy alto |
+
+### Tipos de Aplicaciones Compatibles
+
+El sistema puede trabajar con diferentes tipos de aplicaciones UR:
+
+**Paletizado (Principal):**
+- ✅ Patrones de mosaico
+- ✅ Apilado de cajas/productos
+- ✅ Gestión de pallets multicapa
+- ✅ Múltiples líneas de producción
+
+**Pick & Place:**
+- ✅ Recogida y colocación de piezas
+- ✅ Patrones de ordenación
+- ✅ Trayectorias optimizadas
+
+**Machine Tending:**
+- 🔄 Carga/descarga de máquinas
+- 🔄 Secuencias de espera
+- 🔄 Puntos de aproximación
+
+**Ensamblaje:**
+- 🔄 Secuencias de montaje
+- 🔄 Puntos de inserción
+- 🔄 Movimientos de precisión
+
+✅ Totalmente compatible | 🔄 Compatible con adaptaciones menores
+
+### Configuración de Proyectos
+
+El sistema permitirá configurar:
+
+**Detección Manual (cuando sea necesaria):**
+```json
+{
+  "project_name": "L16_Paletizado",
+  "robot_model": "UR16e",
+  "project_type": "palletizing",
+  "script_patterns": {
+    "mosaic_files": "mosaico*.script",
+    "pick_variable": "PosicionCogida",
+    "place_variable": "PosicionDejada"
+  },
+  "workspace_limits": {
+    "x": [-1300, 1300],
+    "y": [-1300, 1300],
+    "z": [0, 1000]
+  }
+}
+```
+
+**Detección Automática (preferida):**
+- El sistema analizará el proyecto y generará esta configuración automáticamente
+- El usuario podrá revisar y ajustar si es necesario
+- Se guardará como perfil reutilizable
+
+### Casos de Uso Multi-Proyecto
+
+**Escenario 1: Múltiples líneas en la misma planta**
+```
+Planta A/
+├── L16_Paletizado/        (UR16e)
+├── L10_Paletizado/        (UR10e)
+└── L05_PickPlace/         (UR5e)
+
+→ El sistema detecta y trabaja con los 3 proyectos
+→ Configuración específica por proyecto
+→ Base de datos de configuraciones guardadas
+```
+
+**Escenario 2: Diferentes versiones del mismo proyecto**
+```
+L16_Paletizado/
+├── Produccion/            (activo)
+├── Testing/               (pruebas)
+└── Backup_2024/           (histórico)
+
+→ El sistema distingue entre versiones
+→ Permite comparar configuraciones
+→ Facilita rollback si es necesario
+```
+
+**Escenario 3: Diferentes fabricantes en la planta**
+```
+Robots/
+├── UR16_Linea1/           ✅ Compatible
+├── UR10_Linea2/           ✅ Compatible
+├── ABB_Linea3/            ❌ No compatible (diferente fabricante)
+└── KUKA_Linea4/           ❌ No compatible (diferente fabricante)
+
+→ El sistema identifica automáticamente proyectos UR
+→ Muestra advertencia para otros fabricantes
+```
+
+### Implementación (Fase 1 mejorada)
+
+Durante la **FASE 1 - Análisis y Parser**, se implementará:
+
+1. **Detector de proyectos UR:**
+   - Escaneo de directorios
+   - Identificación de archivos UR
+   - Análisis de estructura
+
+2. **Parser inteligente:**
+   - Reconocimiento de convenciones
+   - Extracción de variables relevantes
+   - Adaptación a diferentes estilos de código
+
+3. **Sistema de perfiles:**
+   - Guardado de configuraciones detectadas
+   - Reutilización para proyectos similares
+   - Biblioteca de patrones comunes
+
+4. **Validador adaptativo:**
+   - Límites específicos por modelo
+   - Reglas personalizables
+   - Warnings según aplicación
+
+### Beneficios de la Detección Automática
+
+✅ **Flexibilidad:** Trabajar con cualquier proyecto UR sin configuración manual
+✅ **Reutilización:** Mismo sistema para múltiples líneas/proyectos
+✅ **Escalabilidad:** Fácil expansión a nuevos proyectos
+✅ **Mantenimiento:** Un solo sistema para toda la planta
+✅ **Seguridad:** Validaciones específicas por modelo de robot
+
+### Limitaciones
+
+⚠️ **No compatible con:**
+- Robots de otros fabricantes (ABB, KUKA, Fanuc, etc.)
+- Proyectos que no usen archivos .script
+- Código compilado o binario sin acceso al source
+
+⚠️ **Requiere adaptación manual para:**
+- Convenciones de nombres muy diferentes
+- Estructuras de datos custom muy específicas
+- Proyectos con encriptación o protección
+
+---
+
 ## Fases de Desarrollo
 
 ### 📋 FASE 0: Preparación (ACTUAL)

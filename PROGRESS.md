@@ -120,7 +120,15 @@ _Ninguna todavía_
 - [ ] Identificar variables críticas (puntos de cogida/dejada)
 - [ ] Crear especificación de formato de datos
 
-#### 1.2 Parser de Archivos
+#### 1.2 Detección Automática de Proyectos UR (NUEVO)
+- [ ] Implementar detector de estructura de proyectos UR
+- [ ] Identificar modelo de robot desde archivos .installation/.urp
+- [ ] Reconocer convenciones de nombres (mosaico*, pattern*, layer*)
+- [ ] Detectar variables de puntos (pick, place, offset)
+- [ ] Crear sistema de perfiles de proyecto
+- [ ] Implementar validaciones adaptativas por modelo de robot
+
+#### 1.3 Parser de Archivos
 - [ ] Implementar lectura de archivos .script
 - [ ] Extraer puntos de mosaico
 - [ ] Extraer puntos de cogida
@@ -129,7 +137,13 @@ _Ninguna todavía_
 - [ ] Convertir a formato JSON estructurado
 - [ ] Crear tests unitarios para parser
 
-#### 1.3 Escritor de Archivos
+#### 1.4 Parser Adaptativo Multi-Proyecto
+- [ ] Implementar adaptación a diferentes convenciones
+- [ ] Soporte para UR3/UR5/UR10/UR16/UR20/UR30
+- [ ] Detección de tipo de aplicación (paletizado, pick&place, etc.)
+- [ ] Guardado de configuraciones detectadas
+
+#### 1.5 Escritor de Archivos
 - [ ] Implementar generación de archivos .script
 - [ ] Mantener formato original
 - [ ] Preservar comentarios
@@ -265,6 +279,23 @@ _Se actualizará al comenzar la fase_
 - Electron: Descartado por complejidad y tamaño
 - PyQt: Descartado por GUI menos moderna
 - URCap: Descartado por alta complejidad de desarrollo
+
+### 2025-01-18 - Compatibilidad Multi-Proyecto UR
+**Decisión:** Implementar sistema de detección automática para cualquier proyecto UR
+**Razones:**
+- Flexibilidad para trabajar con múltiples líneas de producción
+- Reutilización del sistema en toda la planta
+- Escalabilidad sin necesidad de desarrollo adicional
+- Validaciones adaptativas según modelo de robot (UR3/UR5/UR10/UR16/UR20/UR30)
+
+**Alcance:**
+- ✅ Todos los modelos Universal Robots (CB3 y e-Series)
+- ✅ Diferentes tipos de aplicaciones (paletizado, pick&place, machine tending)
+- ✅ Detección automática de estructura de proyecto
+- ✅ Sistema de perfiles reutilizables
+- ❌ Robots de otros fabricantes (ABB, KUKA, Fanuc)
+
+**Implementación:** FASE 1 - Se incluirá detector automático y parser adaptativo
 
 ---
 
