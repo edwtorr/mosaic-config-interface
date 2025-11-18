@@ -1,5 +1,7 @@
 # Interfaz de Configuración de Mosaicos - Robot Paletizador L16
 
+**Repositorio:** https://github.com/edwtorr/mosaic-config-interface
+
 ## Descripción del Proyecto
 
 Interfaz web para la configuración y ajuste de puntos de cogida y dejada de los patrones de mosaico del sistema de paletizado L16, eliminando la necesidad de modificar código directamente y simplificando los ajustes por parte del equipo técnico.
