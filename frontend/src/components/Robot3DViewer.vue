@@ -44,6 +44,41 @@
       </div>
     </div>
 
+    <!-- Controles de animación -->
+    <div class="animation-panel" v-if="props.allPoses.length > 1">
+      <h4>Animación de Trayectoria</h4>
+      
+      <div class="animation-controls">
+        <button @click="playAnimation" :disabled="isAnimating" class="btn-control btn-play">
+          ▶ Play
+        </button>
+        <button @click="pauseAnimation" :disabled="!isAnimating" class="btn-control btn-pause">
+          ⏸ Pause
+        </button>
+        <button @click="stopAnimation" class="btn-control btn-stop">
+          ⏹ Stop
+        </button>
+      </div>
+
+      <div class="speed-control">
+        <label class="control-label">Velocidad: {{ animationSpeed.toFixed(1) }}x</label>
+        <input 
+          type="range" 
+          v-model.number="animationSpeed" 
+          @input="updateAnimationSpeed"
+          min="0.1" 
+          max="5.0" 
+          step="0.1" 
+          class="speed-slider"
+        />
+      </div>
+
+      <div class="progress-bar">
+        <div class="progress-fill" :style="{ width: animationProgress + '%' }"></div>
+        <span class="progress-text">{{ animationProgress.toFixed(0) }}%</span>
+      </div>
+    </div>
+
     <!-- Información de la posición actual -->
     <div class="info-panel" v-if="currentPose">
       <h4>Posición Actual</h4>
@@ -69,6 +104,8 @@ import { ref, onMounted, onUnmounted, watch } from 'vue'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
 import { UR16E_SPECS, END_EFFECTOR_SPECS, PRODUCT_SPECS, calculateInverseKinematics } from '../utils/ur16e-specs'
+import { TrajectoryAnimator, createTrajectoryLine, createTrajectoryMarkers } from '../utils/trajectory-animator.js'
+import * as TWEEN from '@tweenjs/tween.js'
 
 const props = defineProps({
   pose: {
@@ -96,6 +133,11 @@ const showTrajectory = ref(false)
 const currentPose = ref(null)
 const isWithinLimits = ref(null)
 
+// Estado de animación
+const isAnimating = ref(false)
+const animationSpeed = ref(1.0)
+const animationProgress = ref(0)
+
 // Three.js objects
 let scene, camera, renderer, controls
 let robot = null
@@ -105,6 +147,10 @@ let workspace = null
 let gridHelper = null
 let axesHelper = null
 let trajectoryLine = null
+let trajectoryMarkers = []
+
+// Animator
+let animator = null
 
 /**
  * Inicializar escena Three.js
@@ -577,9 +623,123 @@ function toggleAxes() {
  * Toggle trajectory visibility
  */
 function toggleTrajectory() {
-  // Implementar visualización de trayectoria
+  if (showTrajectory.value) {
+    createTrajectoryVisualization()
+  } else {
+    removeTrajectoryVisualization()
+  }
+}
+
+/**
+ * Crear visualización de trayectoria
+ */
+function createTrajectoryVisualization() {
+  if (props.allPoses.length < 2) return
+
+  // Remover trayectoria anterior si existe
+  removeTrajectoryVisualization()
+
+  // Crear puntos de la trayectoria
+  const points = props.allPoses.map(pose => 
+    new THREE.Vector3(pose.x, pose.z, pose.y)
+  )
+
+  // Crear línea
+  trajectoryLine = createTrajectoryLine(points, 0x3498db, 2)
+  scene.add(trajectoryLine)
+
+  // Crear marcadores
+  trajectoryMarkers = createTrajectoryMarkers(props.allPoses, 0xe74c3c, 10)
+  trajectoryMarkers.forEach(marker => scene.add(marker))
+}
+
+/**
+ * Remover visualización de trayectoria
+ */
+function removeTrajectoryVisualization() {
   if (trajectoryLine) {
-    trajectoryLine.visible = showTrajectory.value
+    scene.remove(trajectoryLine)
+    trajectoryLine = null
+  }
+  
+  trajectoryMarkers.forEach(marker => scene.remove(marker))
+  trajectoryMarkers = []
+}
+
+/**
+ * Inicializar animador de trayectorias
+ */
+function initializeAnimator() {
+  if (props.allPoses.length < 2) return
+
+  // Crear nuevo animador
+  animator = new TrajectoryAnimator(props.allPoses, {
+    speed: animationSpeed.value,
+    resolution: 50,
+    loop: false,
+    pauseAtPoints: false,
+    moveSpeed: 500
+  })
+
+  // Callback de actualización
+  animator.onUpdate((pose, progress, segmentIndex) => {
+    updateRobotPose(pose)
+    animationProgress.value = progress * 100
+  })
+
+  // Callback de completado
+  animator.onComplete(() => {
+    isAnimating.value = false
+    animationProgress.value = 100
+  })
+}
+
+/**
+ * Iniciar animación
+ */
+function playAnimation() {
+  if (!animator) {
+    initializeAnimator()
+  }
+  
+  if (animator) {
+    animator.play()
+    isAnimating.value = true
+  }
+}
+
+/**
+ * Pausar animación
+ */
+function pauseAnimation() {
+  if (animator) {
+    animator.pause()
+    isAnimating.value = false
+  }
+}
+
+/**
+ * Detener animación
+ */
+function stopAnimation() {
+  if (animator) {
+    animator.stop()
+    isAnimating.value = false
+    animationProgress.value = 0
+    
+    // Volver a la primera pose
+    if (props.allPoses.length > 0) {
+      updateRobotPose(props.allPoses[0])
+    }
+  }
+}
+
+/**
+ * Actualizar velocidad de animación
+ */
+function updateAnimationSpeed() {
+  if (animator) {
+    animator.setSpeed(animationSpeed.value)
   }
 }
 
@@ -588,6 +748,12 @@ function toggleTrajectory() {
  */
 function animate() {
   requestAnimationFrame(animate)
+  
+  // Actualizar TWEEN para animaciones
+  if (animator) {
+    animator.update()
+  }
+  
   controls.update()
   renderer.render(scene, camera)
 }
@@ -626,12 +792,28 @@ onUnmounted(() => {
 
 // Watch for pose changes
 watch(() => props.pose, (newPose) => {
-  updateRobotPose(newPose)
+  if (!isAnimating.value) {
+    updateRobotPose(newPose)
+  }
 }, { deep: true })
 
 // Watch for product dimensions changes
 watch(() => props.productDimensions, (newDimensions) => {
   createProduct(newDimensions)
+}, { deep: true })
+
+// Watch for allPoses changes
+watch(() => props.allPoses, () => {
+  // Reinicializar animador si hay cambios en las poses
+  if (animator) {
+    stopAnimation()
+    animator = null
+  }
+  
+  // Actualizar visualización de trayectoria si está activa
+  if (showTrajectory.value) {
+    createTrajectoryVisualization()
+  }
 }, { deep: true })
 </script>
 
@@ -757,5 +939,154 @@ watch(() => props.productDimensions, (newDimensions) => {
 .status-badge.invalid {
   background: #fadbd8;
   color: #e74c3c;
+}
+
+.animation-panel {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: rgba(255, 255, 255, 0.95);
+  padding: 16px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(10px);
+  min-width: 250px;
+}
+
+.animation-panel h4 {
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.animation-controls {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.btn-control {
+  flex: 1;
+  padding: 8px 12px;
+  font-size: 14px;
+  border: 1px solid #ddd;
+  background: white;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-weight: 500;
+}
+
+.btn-control:hover:not(:disabled) {
+  background: #f0f0f0;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.btn-control:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-play {
+  color: #27ae60;
+  border-color: #27ae60;
+}
+
+.btn-play:hover:not(:disabled) {
+  background: #d5f4e6;
+  border-color: #27ae60;
+}
+
+.btn-pause {
+  color: #f39c12;
+  border-color: #f39c12;
+}
+
+.btn-pause:hover:not(:disabled) {
+  background: #fef5e7;
+  border-color: #f39c12;
+}
+
+.btn-stop {
+  color: #e74c3c;
+  border-color: #e74c3c;
+}
+
+.btn-stop:hover:not(:disabled) {
+  background: #fadbd8;
+  border-color: #e74c3c;
+}
+
+.speed-control {
+  margin-bottom: 16px;
+}
+
+.speed-slider {
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background: #ddd;
+  outline: none;
+  -webkit-appearance: none;
+}
+
+.speed-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #3498db;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.speed-slider::-webkit-slider-thumb:hover {
+  background: #2980b9;
+  transform: scale(1.2);
+}
+
+.speed-slider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #3498db;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s;
+}
+
+.speed-slider::-moz-range-thumb:hover {
+  background: #2980b9;
+  transform: scale(1.2);
+}
+
+.progress-bar {
+  position: relative;
+  width: 100%;
+  height: 24px;
+  background: #ecf0f1;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #3498db, #2ecc71);
+  transition: width 0.3s ease;
+  border-radius: 12px;
+}
+
+.progress-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 12px;
+  font-weight: 600;
+  color: #2c3e50;
+  z-index: 1;
 }
 </style>
