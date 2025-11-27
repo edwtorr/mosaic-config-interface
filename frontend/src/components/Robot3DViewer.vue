@@ -181,99 +181,141 @@ function initScene() {
 }
 
 /**
- * Crear modelo del robot UR16e
+ * Crear modelo del robot UR16e con jerarquía correcta
  */
 function createRobot() {
   robot = new THREE.Group()
+  robot.name = 'UR16e_Robot'
   const specs = UR16E_SPECS.dimensions
 
-  // Base del robot
-  const baseGeometry = new THREE.CylinderGeometry(specs.baseRadius, specs.baseRadius, specs.baseHeight, 32)
+  // Materiales
   const baseMaterial = new THREE.MeshStandardMaterial({
     color: UR16E_SPECS.colors.base,
     roughness: 0.5,
     metalness: 0.5
   })
-  const base = new THREE.Mesh(baseGeometry, baseMaterial)
-  base.position.y = specs.baseHeight / 2
-  base.castShadow = true
-  robot.add(base)
-
-  // Joint 1 (Base rotation) - Hombro
-  const shoulder = new THREE.Group()
-  shoulder.position.y = specs.d1
-
-  const shoulderGeometry = new THREE.SphereGeometry(specs.shoulderRadius, 32, 16)
   const jointMaterial = new THREE.MeshStandardMaterial({
     color: UR16E_SPECS.colors.joints,
     roughness: 0.3,
     metalness: 0.7
   })
-  const shoulderMesh = new THREE.Mesh(shoulderGeometry, jointMaterial)
-  shoulderMesh.castShadow = true
-  shoulder.add(shoulderMesh)
-
-  // Upper arm (Shoulder to Elbow)
-  const upperArmGeometry = new THREE.CylinderGeometry(40, 40, specs.a2, 16)
   const linkMaterial = new THREE.MeshStandardMaterial({
     color: UR16E_SPECS.colors.links,
     roughness: 0.4,
     metalness: 0.6
   })
-  const upperArm = new THREE.Mesh(upperArmGeometry, linkMaterial)
-  upperArm.position.x = specs.a2 / 2
-  upperArm.rotation.z = Math.PI / 2
-  upperArm.castShadow = true
-  shoulder.add(upperArm)
-
-  robot.add(shoulder)
-  robot.userData.shoulder = shoulder
-
-  // Joint 2 (Elbow)
-  const elbow = new THREE.Group()
-  elbow.position.set(specs.a2, specs.d1, 0)
-
-  const elbowGeometry = new THREE.SphereGeometry(specs.elbowRadius, 32, 16)
-  const elbowMesh = new THREE.Mesh(elbowGeometry, jointMaterial)
-  elbowMesh.castShadow = true
-  elbow.add(elbowMesh)
-
-  // Forearm (Elbow to Wrist)
-  const forearmGeometry = new THREE.CylinderGeometry(35, 35, specs.a3, 16)
-  const forearm = new THREE.Mesh(forearmGeometry, linkMaterial)
-  forearm.position.x = specs.a3 / 2
-  forearm.rotation.z = Math.PI / 2
-  forearm.castShadow = true
-  elbow.add(forearm)
-
-  robot.add(elbow)
-  robot.userData.elbow = elbow
-
-  // Wrist assembly
-  const wrist = new THREE.Group()
-  wrist.position.set(specs.a2 + specs.a3, specs.d1, 0)
-
-  const wristGeometry = new THREE.SphereGeometry(specs.wristRadius, 32, 16)
-  const wristMesh = new THREE.Mesh(wristGeometry, jointMaterial)
-  wristMesh.castShadow = true
-  wrist.add(wristMesh)
-
-  // Flange
-  const flangeGeometry = new THREE.CylinderGeometry(60, 60, 30, 32)
   const flangeMaterial = new THREE.MeshStandardMaterial({
     color: UR16E_SPECS.colors.flange,
     roughness: 0.2,
     metalness: 0.8
   })
+
+  // BASE FIJA
+  const baseGeometry = new THREE.CylinderGeometry(specs.baseRadius, specs.baseRadius, specs.baseHeight, 32)
+  const base = new THREE.Mesh(baseGeometry, baseMaterial)
+  base.position.y = specs.baseHeight / 2
+  base.castShadow = true
+  robot.add(base)
+
+  // JOINT 1 - Base rotation (alrededor de Y)
+  const j1 = new THREE.Group()
+  j1.name = 'joint1_base'
+  j1.position.y = specs.d1
+  robot.add(j1)
+
+  // Shoulder visual
+  const shoulderGeometry = new THREE.SphereGeometry(specs.shoulderRadius, 32, 16)
+  const shoulderMesh = new THREE.Mesh(shoulderGeometry, jointMaterial)
+  shoulderMesh.castShadow = true
+  j1.add(shoulderMesh)
+
+  // JOINT 2 - Shoulder rotation (alrededor de Z local)
+  const j2 = new THREE.Group()
+  j2.name = 'joint2_shoulder'
+  j2.position.set(0, 0, 0) // En el centro del shoulder
+  j1.add(j2)
+
+  // Upper arm (brazo superior)
+  const upperArmGeometry = new THREE.CylinderGeometry(40, 40, specs.a2, 16)
+  const upperArm = new THREE.Mesh(upperArmGeometry, linkMaterial)
+  upperArm.position.x = specs.a2 / 2
+  upperArm.rotation.z = Math.PI / 2
+  upperArm.castShadow = true
+  j2.add(upperArm)
+
+  // JOINT 3 - Elbow rotation
+  const j3 = new THREE.Group()
+  j3.name = 'joint3_elbow'
+  j3.position.x = specs.a2
+  j2.add(j3)
+
+  // Elbow visual
+  const elbowGeometry = new THREE.SphereGeometry(specs.elbowRadius, 32, 16)
+  const elbowMesh = new THREE.Mesh(elbowGeometry, jointMaterial)
+  elbowMesh.castShadow = true
+  j3.add(elbowMesh)
+
+  // Forearm (brazo inferior)
+  const forearmGeometry = new THREE.CylinderGeometry(35, 35, specs.a3, 16)
+  const forearm = new THREE.Mesh(forearmGeometry, linkMaterial)
+  forearm.position.x = specs.a3 / 2
+  forearm.rotation.z = Math.PI / 2
+  forearm.castShadow = true
+  j3.add(forearm)
+
+  // JOINT 4 - Wrist 1
+  const j4 = new THREE.Group()
+  j4.name = 'joint4_wrist1'
+  j4.position.x = specs.a3
+  j3.add(j4)
+
+  // Wrist 1 visual
+  const wrist1Geometry = new THREE.SphereGeometry(specs.wristRadius, 32, 16)
+  const wrist1Mesh = new THREE.Mesh(wrist1Geometry, jointMaterial)
+  wrist1Mesh.castShadow = true
+  j4.add(wrist1Mesh)
+
+  // JOINT 5 - Wrist 2
+  const j5 = new THREE.Group()
+  j5.name = 'joint5_wrist2'
+  j5.position.y = specs.d4
+  j4.add(j5)
+
+  // Wrist 2 visual
+  const wrist2Geometry = new THREE.SphereGeometry(specs.wristRadius, 32, 16)
+  const wrist2Mesh = new THREE.Mesh(wrist2Geometry, jointMaterial)
+  wrist2Mesh.castShadow = true
+  j5.add(wrist2Mesh)
+
+  // JOINT 6 - Wrist 3
+  const j6 = new THREE.Group()
+  j6.name = 'joint6_wrist3'
+  j6.position.y = specs.d5
+  j5.add(j6)
+
+  // Wrist 3 visual
+  const wrist3Geometry = new THREE.SphereGeometry(specs.wristRadius * 0.8, 32, 16)
+  const wrist3Mesh = new THREE.Mesh(wrist3Geometry, jointMaterial)
+  wrist3Mesh.castShadow = true
+  j6.add(wrist3Mesh)
+
+  // FLANGE (Tool mounting plate)
+  const flangeGroup = new THREE.Group()
+  flangeGroup.name = 'flange'
+  flangeGroup.position.y = specs.d6
+  j6.add(flangeGroup)
+
+  const flangeGeometry = new THREE.CylinderGeometry(60, 60, 30, 32)
   const flange = new THREE.Mesh(flangeGeometry, flangeMaterial)
-  flange.position.z = specs.d6 / 2
   flange.rotation.x = Math.PI / 2
   flange.castShadow = true
-  wrist.add(flange)
+  flangeGroup.add(flange)
 
-  robot.add(wrist)
-  robot.userData.wrist = wrist
-  robot.userData.flange = flange
+  // Guardar referencias a las articulaciones
+  robot.userData.joints = {
+    j1, j2, j3, j4, j5, j6
+  }
+  robot.userData.flange = flangeGroup
 
   scene.add(robot)
   return robot
@@ -430,33 +472,40 @@ function createWorkspace() {
  * Actualizar posición del robot basado en pose
  */
 function updateRobotPose(pose) {
-  if (!robot || !endEffector) return
+  if (!robot || !robot.userData.joints) return
 
   currentPose.value = pose
 
   // Calcular cinemática inversa (simplificada)
-  const joints = calculateInverseKinematics(pose)
+  const jointAngles = calculateInverseKinematics(pose)
 
-  // Actualizar articulaciones (simplificado - en producción sería más complejo)
-  // Por ahora, movemos el TCP directamente
-  const tcp = new THREE.Vector3(pose.x, pose.z, -pose.y)
+  // Aplicar ángulos a las articulaciones
+  const joints = robot.userData.joints
 
-  if (robot.userData.wrist) {
-    robot.userData.wrist.position.set(tcp.x, tcp.y, tcp.z)
+  // J1 - Base rotation (alrededor de Y)
+  joints.j1.rotation.y = jointAngles.j1
 
-    // Añadir efector final al wrist
-    if (endEffector && !robot.userData.wrist.children.includes(endEffector)) {
-      robot.userData.wrist.add(endEffector)
-    }
+  // J2 - Shoulder rotation (alrededor de Z local)
+  joints.j2.rotation.z = jointAngles.j2
 
-    // Actualizar orientación
-    robot.userData.wrist.rotation.set(pose.rx, pose.ry, pose.rz)
+  // J3 - Elbow rotation (alrededor de Z local)
+  joints.j3.rotation.z = jointAngles.j3
+
+  // J4, J5, J6 - Wrist rotations
+  joints.j4.rotation.z = jointAngles.j4
+  joints.j5.rotation.y = jointAngles.j5
+  joints.j6.rotation.z = jointAngles.j6
+
+  // Añadir efector final al flange si no está ya
+  if (endEffector && robot.userData.flange && !robot.userData.flange.children.includes(endEffector)) {
+    robot.userData.flange.add(endEffector)
   }
 
   // Actualizar posición del producto (debajo del efector)
-  if (product && endEffector) {
+  if (product && robot.userData.flange) {
     const effectorPosition = new THREE.Vector3()
-    endEffector.getWorldPosition(effectorPosition)
+    robot.userData.flange.getWorldPosition(effectorPosition)
+
     product.position.set(
       effectorPosition.x,
       effectorPosition.y - END_EFFECTOR_SPECS.dimensions.height - props.productDimensions.height / 2 - 50,
@@ -468,7 +517,7 @@ function updateRobotPose(pose) {
   const distance = Math.sqrt(pose.x * pose.x + pose.y * pose.y)
   isWithinLimits.value = distance <= UR16E_SPECS.workspace.maxReach &&
                          pose.z >= UR16E_SPECS.workspace.minHeight &&
-                         pose.z <= UR16E_SPECS.workspace.maxHeight
+                         pose.z <= UR16E_SPECS.workspace.maxReach
 }
 
 /**

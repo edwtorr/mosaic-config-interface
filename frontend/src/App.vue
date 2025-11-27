@@ -150,6 +150,13 @@ function handlePoseUpdate(newPose) {
   manualControlledPose.value = newPose
 }
 
+// Handler para actualización de articulaciones desde el control panel
+function handleJointsUpdate(jointAngles) {
+  // Por ahora, solo loguear - la visualización se maneja directamente
+  console.log('Joints updated:', jointAngles)
+  // TODO: Calcular cinemática directa y actualizar pose
+}
+
 // Handler para guardar posición desde el control panel
 function handleSavePosition(pose) {
   // Aquí podrías guardar la posición en el mosaico
@@ -328,6 +335,7 @@ const allPoses = computed(() => {
             <RobotControlPanel
               :current-pose="currentPose"
               @update-pose="handlePoseUpdate"
+              @update-joints="handleJointsUpdate"
               @save-position="handleSavePosition"
               @toggle-freedrive="handleToggleFreedrive"
             />
