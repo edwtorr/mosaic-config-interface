@@ -641,7 +641,7 @@ function createTrajectoryVisualization() {
 
   // Crear puntos de la trayectoria
   const points = props.allPoses.map(pose => 
-    new THREE.Vector3(pose.x, pose.z, pose.y)
+    new THREE.Vector3(pose.x, pose.z, -pose.y)
   )
 
   // Crear línea
