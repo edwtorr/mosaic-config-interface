@@ -2,7 +2,7 @@
 Router para endpoints de programas
 """
 
-from fastapi import APIRouter, HTTPException, status, Query, Body
+from fastapi import APIRouter, HTTPException, status, Query, Body, Path
 from typing import List, Optional
 import logging
 
@@ -80,7 +80,7 @@ async def list_programs(
     description="Retorna la configuración de un programa específico"
 )
 async def get_program(
-    program_id: int = Query(..., ge=1, le=10, description="ID del programa (1-10)"),
+    program_id: int = Path(..., ge=1, le=10, description="ID del programa (1-10)"),
     script_path: Optional[str] = Query(None, description="Ruta al archivo .script")
 ):
     """
@@ -149,7 +149,7 @@ async def get_program(
     description="Actualiza la configuración de un programa"
 )
 async def update_program(
-    program_id: int = Query(..., ge=1, le=10, description="ID del programa (1-10)"),
+    program_id: int = Path(..., ge=1, le=10, description="ID del programa (1-10)"),
     program: Program = Body(..., description="Nueva configuración del programa"),
     script_path: Optional[str] = Query(None, description="Ruta al archivo .script")
 ):

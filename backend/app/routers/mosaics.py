@@ -2,7 +2,7 @@
 Router para endpoints de mosaicos
 """
 
-from fastapi import APIRouter, HTTPException, status, Query, Body
+from fastapi import APIRouter, HTTPException, status, Query, Body, Path
 from typing import List, Optional
 import logging
 
@@ -85,7 +85,7 @@ async def list_mosaics(
     description="Retorna la configuración de un mosaico específico"
 )
 async def get_mosaic(
-    mosaic_id: int = Query(..., ge=1, le=12, description="ID del mosaico (1-12)"),
+    mosaic_id: int = Path(..., ge=1, le=12, description="ID del mosaico (1-12)"),
     script_path: Optional[str] = Query(None, description="Ruta al archivo .script")
 ):
     """
@@ -149,7 +149,7 @@ async def get_mosaic(
     description="Actualiza la configuración completa de un mosaico"
 )
 async def update_mosaic(
-    mosaic_id: int = Query(..., ge=1, le=12, description="ID del mosaico (1-12)"),
+    mosaic_id: int = Path(..., ge=1, le=12, description="ID del mosaico (1-12)"),
     mosaic: Mosaic = Body(..., description="Nueva configuración del mosaico"),
     script_path: Optional[str] = Query(None, description="Ruta al archivo .script"),
     validate_only: bool = Query(False, description="Solo validar sin guardar cambios")
@@ -254,7 +254,7 @@ async def update_mosaic(
     description="Actualiza un punto específico de un mosaico"
 )
 async def update_mosaic_point(
-    mosaic_id: int = Query(..., ge=1, le=12, description="ID del mosaico (1-12)"),
+    mosaic_id: int = Path(..., ge=1, le=12, description="ID del mosaico (1-12)"),
     update: MosaicPointUpdate = Body(..., description="Datos de actualización del punto"),
     script_path: Optional[str] = Query(None, description="Ruta al archivo .script")
 ):
@@ -353,7 +353,7 @@ async def update_mosaic_point(
     description="Valida un mosaico sin guardarlo"
 )
 async def validate_mosaic_endpoint(
-    mosaic_id: int = Query(..., ge=1, le=12, description="ID del mosaico (1-12)"),
+    mosaic_id: int = Path(..., ge=1, le=12, description="ID del mosaico (1-12)"),
     mosaic: Mosaic = Body(..., description="Configuración del mosaico a validar")
 ):
     """
